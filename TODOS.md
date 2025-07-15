@@ -9,8 +9,8 @@
 
 - [x] init database
 - [x] design tables
-- [] api: qrcode login
-- [] api: check qrcode login status
+- [x] api: qrcode login
+- [x] api: check qrcode login status
 - [] api: email / password login
 
 ## Web
