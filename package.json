@@ -1,0 +1,17 @@
+{
+  "name": "qrcode-login",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm run dev --workspace=web & npm run dev --workspace=server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "description": "",
+  "workspaces": [
+    "packages/web",
+    "packages/server",
+    "packages/ios"
+  ]
+}
