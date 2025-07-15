@@ -16,4 +16,4 @@
 ## Web
 
 - [x] init next.js project
-- [] render the qrcode
+- [x] render the qrcode
