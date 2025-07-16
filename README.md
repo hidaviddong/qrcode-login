@@ -9,6 +9,8 @@ The system simulates a cross-device login flow (e.g., scan QR on mobile to log i
 
 **Important Warning**: This is a demo and **NOT suitable for production**. It uses hardcoded credentials, no password hashing, insecure practices (e.g., plain HTTP, no input validation), and minimal error handling. In production, use secure hashing (e.g., bcrypt), HTTPS, proper validation, and a real database with user registration. Do not deploy this as-is, as it could expose security risks.
 
+![Demo](demo.gif)
+
 
 ```mermaid
 sequenceDiagram
