@@ -3,7 +3,8 @@
 ## Mobile
 
 - [x] init react native project
-- [] show a click button and it can open camera in ios
+- [x] show a click button and it can open camera in ios
+- [x] scan qrcode and send request to server
 
 ## Server
 
@@ -11,9 +12,10 @@
 - [x] design tables
 - [x] api: qrcode login
 - [x] api: check qrcode login status
-- [] api: email / password login
+- [x] api: email / password login
 
 ## Web
 
 - [x] init next.js project
 - [x] render the qrcode
+  

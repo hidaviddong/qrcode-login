@@ -4,7 +4,6 @@ async function initDB() {
     try {
         const removeAllTables = `
         DROP TABLE IF EXISTS qr_sessions;
-        DROP TABLE IF EXISTS auth_tokens;
         DROP TABLE IF EXISTS users;
         `;
         await db.query(removeAllTables, [])
@@ -28,18 +27,8 @@ async function initDB() {
         );
         `;
 
-        const createAuthTokensTable = `
-        CREATE TABLE IF NOT EXISTS auth_tokens (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        token TEXT UNIQUE NOT NULL,
-        expires_at TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        `;
         await db.query(createUsersTable, [])
         await db.query(createQrSessionsTable, [])
-        await db.query(createAuthTokensTable, [])
 
         const insertUser = `
         INSERT INTO users (email, password_hash) VALUES ($1, $2)
