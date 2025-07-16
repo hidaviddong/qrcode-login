@@ -2,24 +2,30 @@
 
 import useSWR from "swr"
 
+const fetcher = async (url: string) => {
+  const authToken = sessionStorage.getItem('qrcode-auth-token');
+  console.log("authToken",authToken)
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
 
-const fetcher = async (...args: Parameters<typeof fetch>) => {
-    const res = await fetch(...args);
-    if (!res.ok) {
-      const errorText = await res.text(); 
-      const error = new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${errorText}`);
-      (error as any).status = res.status;
-      throw error;
-    }
-    return res.json();
-  };
+  if (!res.ok) {
+    const errorText = await res.text();
+    const error = new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${errorText}`);
+    (error as any).status = res.status;
+    throw error;
+  }
+  return res.json();
+};
 
 
 
 export default function Protected() {
     const protectedKey = `http://localhost:3001/protected`
     const { data: protectedData, error: protectedError, isLoading: protectedLoading } = useSWR(protectedKey, fetcher, {
-        refreshInterval: 3000, 
         refreshWhenHidden: false,
         refreshWhenOffline: false,
         shouldRetryOnError: false,

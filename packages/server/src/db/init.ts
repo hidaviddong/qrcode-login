@@ -33,7 +33,7 @@ async function initDB() {
         const insertUser = `
         INSERT INTO users (email, password_hash) VALUES ($1, $2)
         `;
-        await db.query(insertUser, ['admin@gmail.com', '123456'])
+        await db.query(insertUser, ['1', '1'])
     
         console.log('Database initialized successfully')
         await db.end()

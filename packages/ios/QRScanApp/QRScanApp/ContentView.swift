@@ -6,18 +6,19 @@
 //
 
 import SwiftUI
-import AVFoundation
+import AVFoundation  // 用于摄像头和 QR 检测
 
+// 登录视图
 struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
     @State private var isLoggedIn = false
-    @State private var userEmail = ""
+    @State private var userEmail = ""  // 存储登录后 email
     
     var body: some View {
         if isLoggedIn {
-            ContentView(userEmail: userEmail)
+            ContentView(userEmail: userEmail)  // 登录成功，跳转主视图
         } else {
             VStack {
                 TextField("Email", text: $email)
@@ -52,7 +53,6 @@ struct LoginView: View {
                 DispatchQueue.main.async { errorMessage = "登录失败" }
                 return
             }
-            print(data)
             // 存储 JWT
             UserDefaults.standard.set(jwt, forKey: "jwtToken")
             DispatchQueue.main.async {
@@ -93,34 +93,13 @@ struct ContentView: View {
             CameraView { code in
                 scannedCode = code
                 isShowingCamera = false
-                confirmLogin(scannedToken: code)  // 扫描后调用确认
             }
         }
     }
-    
-    // 发送确认请求（带 JWT）
-    private func confirmLogin(scannedToken: String) {
-        guard let jwt = UserDefaults.standard.string(forKey: "jwtToken"),
-              let url = URL(string: "http://localhost:3001/confirm-login") else { return }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")  // 带 JWT
-        let body: [String: String] = ["scannedToken": scannedToken]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("确认失败: \(error)")
-                return
-            }
-            // 处理成功响应（可选更新 UI，例如打印或警报）
-            print("确认成功")
-        }.resume()
-    }
 }
 
-// 自定义摄像头视图控制器（基于 AVFoundation）
+
+
 class QRScannerController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     var captureSession: AVCaptureSession!
     var previewLayer: AVCaptureVideoPreviewLayer!
@@ -193,12 +172,66 @@ class QRScannerController: UIViewController, AVCaptureMetadataOutputObjectsDeleg
             guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
             guard let stringValue = readableObject.stringValue else { return }
             
-            // 调用回调，返回解码数据
-            onScan(stringValue)
+            // 弹出确认弹窗（在主线程）
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                let alert = UIAlertController(title: "确认登录", message: "确认使用此 QR 码登录吗？", preferredStyle: .alert)
+                
+                // “确认” 按钮：发送请求
+                alert.addAction(UIAlertAction(title: "确认", style: .default, handler: { _ in
+                    self.confirmLogin(scannedToken: stringValue) { success in
+                        DispatchQueue.main.async {  // [修复] 所有 UI/回调在主线程
+                            if success {
+                                self.onScan(stringValue)  // 成功后调用回调
+                                self.dismiss(animated: true)  // 关闭视图
+                            } else {
+                                // 失败警报
+                                let errorAlert = UIAlertController(title: "错误", message: "确认失败，请重试", preferredStyle: .alert)
+                                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                                self.present(errorAlert, animated: true)
+                            }
+                        }
+                    }
+                }))
+                
+                // “取消” 按钮：不发送，关闭弹窗
+                alert.addAction(UIAlertAction(title: "取消", style: .cancel, handler: { _ in
+                    self.dismiss(animated: true)  // 关闭视图
+                }))
+                
+                // 显示弹窗
+                self.present(alert, animated: true)
+            }
         }
+    }
+    
+    // 发送确认请求（私有函数）
+    private func confirmLogin(scannedToken: String, completion: @escaping (Bool) -> Void) {
+        guard let jwt = UserDefaults.standard.string(forKey: "jwtToken"),
+              let url = URL(string: "http://192.168.5.14:3001/confirm-login") else {
+            completion(false)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        let body: [String: String] = ["scannedToken": scannedToken]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
-        // 关闭视图
-        dismiss(animated: true)
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("确认失败: \(error)")
+                completion(false)
+                return
+            }
+            // 检查响应状态（假设 200 表示成功）
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                completion(true)
+            } else {
+                completion(false)
+            }
+        }.resume()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -208,6 +241,9 @@ class QRScannerController: UIViewController, AVCaptureMetadataOutputObjectsDeleg
         }
     }
 }
+
+
+
 
 // SwiftUI 包装器
 struct CameraView: UIViewControllerRepresentable {

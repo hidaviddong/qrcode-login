@@ -20,6 +20,7 @@ export default function Qrcode({ svg, token }: QrCodeProps) {
     refreshWhenOffline: false,
     onSuccess: (data) => {
       if (data.status === 'confirmed') {
+        sessionStorage.setItem('qrcode-auth-token', data.authToken)
         mutate('http://localhost:3001/protected')
         setShouldPoll(false);
       }
@@ -36,11 +37,16 @@ export default function Qrcode({ svg, token }: QrCodeProps) {
   if(error) {
     return <div>Error: {error.message}</div>
   }
-  
-  return (
-    <div>
-      <div dangerouslySetInnerHTML={{ __html: svg }} className="w-48 h-48" />
-      <p className={"text-md text-center " + (data?.status === 'confirmed' ? 'text-green-500' : 'text-red-500')}>{data?.status}</p>
-    </div>
-  );
+
+  return ( 
+        !sessionStorage.getItem('qrcode-auth-token') ? (
+            <div>
+                <div dangerouslySetInnerHTML={{ __html: svg }} className="w-48 h-48" />
+                <p className={"text-md text-center " + (data?.status === 'confirmed' ? 'text-green-500' : 'text-red-500')}>{data?.status}</p>
+            </div>
+        ) : (
+            <></>
+        )
+    
+  )
 }

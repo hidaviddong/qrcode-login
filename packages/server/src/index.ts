@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { decode, jwt, sign, verify } from 'hono/jwt'
+import { jwt, sign } from 'hono/jwt'
 import db from './db/index.js'
 import { randomUUID } from 'node:crypto'
 
@@ -28,12 +28,12 @@ app.post('/login', async (c) => {
   }
 
   const user = result.rows[0]
-  console.log(email,password,user)
   if(user.password_hash !== password) {
     return c.json({ error: 'Invalid password' }, 400)
   }
   const payload = {
     sub: user.email,
+    userId:user.id,
     exp: Math.floor(Date.now() / 1000) + 60 * 5
   }
   const token = await sign(payload, JWT_SECRET);
@@ -73,14 +73,15 @@ app.get('/check-qrcode/:token', async (c) => {
   return c.json({ status:'pending', authToken: null }, 200)
 })
 
-app.post('/confirm-qrcode', jwt({secret: JWT_SECRET}), async (c) => {
-  const { token, user_id } = await c.req.json()
-
-  if(!token || !user_id) {
-    return c.json({ error: 'Token and user_id are required' }, 400)
+app.post('/confirm-login', jwt({secret: JWT_SECRET}), async (c) => {
+  const { scannedToken } = await c.req.json();
+  const payload = c.get('jwtPayload');
+  const userId = payload?.userId;
+  if(!scannedToken) {
+    return c.json({ error: 'Scanned token is required' }, 400)
   }
 
-  const result = await db.query('SELECT * FROM qr_sessions WHERE token = $1 AND expires_at > NOW()', [token])
+  const result = await db.query('SELECT * FROM qr_sessions WHERE token = $1 AND expires_at > NOW()', [scannedToken])
   if (result.rows.length === 0) {
     return c.json({ error: 'Invalid or expired QR code' }, 400)
   }
@@ -89,17 +90,13 @@ app.post('/confirm-qrcode', jwt({secret: JWT_SECRET}), async (c) => {
     return c.json({ error: 'QR code already confirmed' }, 400)
   }
 
-  await db.query('UPDATE qr_sessions SET status = $1, user_id = $2 WHERE token = $3', ['confirmed', user_id, token])
+  await db.query('UPDATE qr_sessions SET status = $1, user_id = $2 WHERE token = $3', ['confirmed', userId, scannedToken])
   return c.json({ message: 'QR code confirmed' }, 200)
 })
 
 app.get('/protected', jwt({secret: JWT_SECRET}), async (c) => {
   const payload = c.get('jwtPayload');
-  console.log("访问用户是",payload.sub)
-  if(payload){
-    return c.json({message: 'This is a protected message'}, 200)
-  }
-  return c.json({message: 'Unauthorized'}, 401)
+  return c.json({message: 'Hello, '+payload.sub}, 200)
 })
 
 
