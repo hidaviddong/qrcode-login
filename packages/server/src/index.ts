@@ -40,6 +40,7 @@ app.post('/login', async (c) => {
   return c.json({ token })
 })
 
+
 app.get('/generate-qrcode', async (c) => {
   const token = randomUUID()
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
@@ -91,23 +92,16 @@ app.post('/confirm-qrcode', jwt({secret: JWT_SECRET}), async (c) => {
   await db.query('UPDATE qr_sessions SET status = $1, user_id = $2 WHERE token = $3', ['confirmed', user_id, token])
   return c.json({ message: 'QR code confirmed' }, 200)
 })
-app.post('/login', async (c) => {
-  const { email, password } = await c.req.json()
 
-  const result = await db.query('SELECT * FROM users WHERE email = $1', [email])
-  if(result.rows.length === 0) {
-    return c.json({ error: 'User not found' }, 400)
+app.get('/protected', jwt({secret: JWT_SECRET}), async (c) => {
+  const payload = c.get('jwtPayload');
+  console.log("访问用户是",payload.sub)
+  if(payload){
+    return c.json({message: 'This is a protected message'}, 200)
   }
-
-  const user = result.rows[0]
-  if(user.password !== password) {
-    return c.json({ error: 'Invalid password' }, 400)
-  }
-
-  const payload = {
-    sub: user.id,
-  }
+  return c.json({message: 'Unauthorized'}, 401)
 })
+
 
 serve({
   fetch: app.fetch,

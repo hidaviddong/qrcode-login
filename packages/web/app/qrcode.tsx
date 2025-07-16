@@ -1,18 +1,17 @@
 'use client';
 
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface QrCodeProps {
   svg: string;
   token: string;
 }
 
+
 const fetcher = (...args: Parameters<typeof fetch>) => fetch(...args).then((res) => res.json());
 
 export default function Qrcode({ svg, token }: QrCodeProps) {
-  const router = useRouter();
   const [shouldPoll, setShouldPoll] = useState(true);
   const pollKey = `http://localhost:3001/check-qrcode/${token}`;
   const { data, error, isLoading } = useSWR(shouldPoll ? pollKey : null, fetcher, {
@@ -20,12 +19,9 @@ export default function Qrcode({ svg, token }: QrCodeProps) {
     refreshWhenHidden: false,
     refreshWhenOffline: false,
     onSuccess: (data) => {
-      if (data.status !== 'pending') {
+      if (data.status === 'confirmed') {
+        mutate('http://localhost:3001/protected')
         setShouldPoll(false);
-        if (data.status === 'confirmed') {
-          // TODO: 鉴权
-          router.push('/test');
-        }
       }
     },
     onError: (err) => {
@@ -40,7 +36,7 @@ export default function Qrcode({ svg, token }: QrCodeProps) {
   if(error) {
     return <div>Error: {error.message}</div>
   }
-
+  
   return (
     <div>
       <div dangerouslySetInnerHTML={{ __html: svg }} className="w-48 h-48" />
